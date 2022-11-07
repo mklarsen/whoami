@@ -16,7 +16,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
 	"github.com/gorilla/websocket"
 )
 
@@ -35,7 +34,9 @@ var (
 	ca      string
 	port    string
 	name    string
+	color   string
 	verbose bool
+	paintwith string
 )
 
 func init() {
@@ -45,12 +46,22 @@ func init() {
 	flag.StringVar(&ca, "cacert", "", "give me a CA chain, enforces mutual TLS")
 	flag.StringVar(&port, "port", getEnv("WHOAMI_PORT_NUMBER", "80"), "give me a port number")
 	flag.StringVar(&name, "name", os.Getenv("WHOAMI_NAME"), "give me a name")
+	flag.StringVar(&color, "color", getEnv("WHOAMI_COLOR", "white"), "give me a color eg:blue, or pink ")
 }
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
+
+const Black = "\033[40m"
+const Red = "\033[41m"
+const Green = "\033[42m"
+const Yellow ="\033[43m"
+const Blue = "\033[44m"
+const Pink = "\033[45m"
+const Cyan = "\033[46m"
+const White = "\033[47m"
 
 func main() {
 	flag.Parse()
@@ -62,6 +73,27 @@ func main() {
 	mux.Handle("/api", handle(apiHandler, verbose))
 	mux.Handle("/health", handle(healthHandler, verbose))
 	mux.Handle("/", handle(whoamiHandler, verbose))
+
+	switch color {
+		case "blank":
+			paintwith=Black
+		case "red":
+			paintwith=Red
+		case "green":
+			paintwith=Green
+		case "yellow":
+			paintwith=Yellow
+		case "blue":
+			paintwith=Blue
+		case "pink":
+			paintwith=Pink
+		case "white":
+			paintwith=White
+		case "cyan":
+			paintwith=Cyan
+		}
+
+	log.Printf("%s", paintwith)
 
 	if cert == "" || key == "" {
 		log.Printf("Starting up on port %s", port)
@@ -202,6 +234,11 @@ func whoamiHandler(w http.ResponseWriter, req *http.Request) {
 			time.Sleep(duration)
 		}
 	}
+
+	if color != "" {
+		_, _ = fmt.Fprintln(w, "%paintwith%", paintwith)
+	}
+
 
 	if name != "" {
 		_, _ = fmt.Fprintln(w, "Name:", name)
